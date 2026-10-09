@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WOODORA — мебель из натурального дерева в Бишкеке</title>
+  <meta name="description" content="WOODORA — мебель из массива дуба и ясеня в Бишкеке. Готовые модели и изготовление на заказ, доставка и сборка.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+
+  <!-- Шапка -->
+  <header class="header">
+    <div class="container header__inner">
+      <a href="#" class="logo" aria-label="WOODORA — на главную">
+        <span class="logo__mark"></span>
+        WOODORA
+      </a>
+
+      <input type="checkbox" id="menu-toggle" class="menu-toggle" aria-hidden="true">
+      <label for="menu-toggle" class="burger" aria-label="Открыть меню">
+        <span></span><span></span><span></span>
+      </label>
+
+      <nav class="nav" aria-label="Основная навигация">
+        <a href="#categories" class="nav__link">Категории</a>
+        <a href="#catalog" class="nav__link">Каталог</a>
+        <a href="#about" class="nav__link">О нас</a>
+        <a href="#reviews" class="nav__link">Отзывы</a>
+        <a href="#contacts" class="nav__link">Контакты</a>
+      </nav>
+
+      <div class="header__actions">
+        <button type="button" class="icon-btn" data-search-open aria-label="Поиск по каталогу">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </button>
+        <a href="#order" class="btn btn--primary btn--sm header__cta">Оставить заявку</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Главный экран -->
+    <section class="hero">
+      <div class="container hero__grid">
+        <div class="hero__content">
+          <p class="kicker">Мебель из массива · Бишкек</p>
+          <h1 class="hero__title">Мебель, в&nbsp;которой живёт <em>тишина</em></h1>
+          <p class="hero__text">Создаём мебель из массива дуба и ясеня в собственной мастерской в Бишкеке. Готовые модели и изготовление по вашим размерам — простые формы и тёплая фактура дерева.</p>
+          <div class="hero__buttons">
+            <a href="#catalog" class="btn btn--primary">
+              Смотреть каталог
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+            <a href="#order" class="btn btn--ghost">Заказать по размерам</a>
+          </div>
+        </div>
+        <figure class="hero__media">
+          <img src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1400&q=80" alt="Светлая гостиная в скандинавском стиле с деревянной мебелью">
+          <figcaption>
+            <button type="button" class="hero__badge" data-order="fjord-sofa">
+              <span class="hero__badge-label">Хит сезона</span>
+              <span class="hero__badge-name">Диван «Фьорд»</span>
+              <span class="hero__badge-price">от 84 900 сом</span>
+            </button>
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="container">
+        <ul class="features">
+          <li class="feature">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22V12"/><path d="M12 12c0-4 3-7 7-8-1 4-3 7-7 8Z"/><path d="M12 15c0-3-2-6-6-7 0 4 2 6 6 7Z"/></svg>
+            <div>
+              <h3>Массив дерева</h3>
+              <p>Дуб, ясень и бук, натуральные масла и воски</p>
+            </div>
+          </li>
+          <li class="feature">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+            <div>
+              <h3>Доставка и сборка</h3>
+              <p>Бережно привезём и соберём по Бишкеку и пригородам</p>
+            </div>
+          </li>
+          <li class="feature">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+            <div>
+              <h3>Гарантия</h3>
+              <p>На каркас и соединения каждого изделия</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Категории -->
+    <section class="section" id="categories">
+      <div class="container">
+        <div class="section__head">
+          <div>
+            <p class="kicker">Категории</p>
+            <h2 class="section__title">Для каждой комнаты</h2>
+          </div>
+          <a href="#catalog" class="link-arrow" data-filter="all">Весь каталог
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+
+        <div class="categories">
+          <a href="#catalog" class="category category--large" data-filter="living">
+            <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80" alt="Диван в гостиной">
+            <div class="category__info">
+              <h3>Гостиная</h3>
+              <span>Диваны, кресла, столики</span>
+            </div>
+          </a>
+          <a href="#catalog" class="category" data-filter="bedroom">
+            <img src="https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=900&q=80" alt="Спальня с деревянной кроватью">
+            <div class="category__info">
+              <h3>Спальня</h3>
+              <span>Кровати, комоды, тумбы</span>
+            </div>
+          </a>
+          <a href="#catalog" class="category" data-filter="dining">
+            <img src="https://images.unsplash.com/photo-1617104678098-de229db51175?auto=format&fit=crop&w=900&q=80" alt="Обеденный стол со стульями">
+            <div class="category__info">
+              <h3>Столовая</h3>
+              <span>Столы, стулья, буфеты</span>
+            </div>
+          </a>
+          <a href="#catalog" class="category" data-filter="office">
+            <img src="https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=900&q=80" alt="Рабочее место с деревянным столом">
+            <div class="category__info">
+              <h3>Кабинет</h3>
+              <span>Рабочие столы, стеллажи</span>
+            </div>
+          </a>
+          <a href="#catalog" class="category" data-filter="decor">
+            <img src="https://images.unsplash.com/photo-1532372320572-cda25653a26d?auto=format&fit=crop&w=900&q=80" alt="Декор и предметы интерьера">
+            <div class="category__info">
+              <h3>Декор</h3>
+              <span>Свет, текстиль, зеркала</span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Каталог -->
+    <section class="section section--tinted" id="catalog">
+      <div class="container">
+        <div class="section__head">
+          <div>
+            <p class="kicker">Каталог</p>
+            <h2 class="section__title">Наши модели</h2>
+          </div>
+          <label class="search">
+            <span class="visually-hidden">Поиск по каталогу</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input type="search" id="catalog-search" placeholder="Диван, дуб, стол…" autocomplete="off">
+          </label>
+        </div>
+
+        <div class="chips" id="catalog-filters" role="group" aria-label="Фильтр по категориям">
+          <button type="button" class="chip chip--active" data-filter="all" aria-pressed="true">Все</button>
+          <button type="button" class="chip" data-filter="new" aria-pressed="false">Новинки</button>
+          <button type="button" class="chip" data-filter="living" aria-pressed="false">Гостиная</button>
+          <button type="button" class="chip" data-filter="bedroom" aria-pressed="false">Спальня</button>
+          <button type="button" class="chip" data-filter="dining" aria-pressed="false">Столовая</button>
+          <button type="button" class="chip" data-filter="office" aria-pressed="false">Кабинет</button>
+          <button type="button" class="chip" data-filter="decor" aria-pressed="false">Декор</button>
+        </div>
+
+        <div class="products" id="products" aria-live="polite"></div>
+
+        <div class="empty" id="catalog-empty" hidden>
+          <p class="empty__title">Ничего не нашлось</p>
+          <p>Попробуйте другой запрос или <a href="#order">оставьте заявку</a> — изготовим мебель по вашим размерам.</p>
+          <button type="button" class="link-arrow" data-reset-filters>Сбросить фильтры</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- О нас -->
+    <section class="section" id="about">
+      <div class="container about">
+        <div class="about__media">
+          <img src="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80" alt="Интерьер с мебелью WOODORA">
+        </div>
+        <div class="about__content">
+          <p class="kicker">О нас</p>
+          <h2 class="section__title">Делаем мебель так, как&nbsp;делали бы для&nbsp;себя</h2>
+          <!-- TODO: заменить на реальную историю мастерской -->
+          <p>WOODORA — мебельная мастерская в Бишкеке. Каждую модель мы проектируем, собираем и шлифуем вручную, а готовые изделия можно адаптировать под ваши размеры и интерьер.</p>
+          <p>Мы используем только натуральные масла и воски, а древесину выбираем так, чтобы рисунок волокон стал главным украшением изделия.</p>
+          <!-- TODO: заменить на реальные цифры -->
+          <dl class="stats">
+            <div class="stat">
+              <dt>100%</dt>
+              <dd>натуральная древесина</dd>
+            </div>
+            <div class="stat">
+              <dt>На заказ</dt>
+              <dd>по вашим размерам</dd>
+            </div>
+            <div class="stat">
+              <dt>Бишкек</dt>
+              <dd>собственная мастерская</dd>
+            </div>
+          </dl>
+          <a href="#order" class="btn btn--dark">
+            Обсудить проект
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Отзывы. TODO: заменить на реальные отзывы клиентов -->
+    <section class="section section--tinted" id="reviews">
+      <div class="container">
+        <div class="section__head">
+          <div>
+            <p class="kicker">Отзывы</p>
+            <h2 class="section__title">Что говорят наши клиенты</h2>
+          </div>
+        </div>
+
+        <div class="reviews">
+          <figure class="review">
+            <div class="stars" aria-label="5 из 5">★★★★★</div>
+            <blockquote>«Заказали обеденный стол „Ольма“ — он стал центром нашей кухни. Дерево тёплое, живое, а сборщики приехали точно в срок.»</blockquote>
+            <figcaption>
+              <span class="review__avatar">АС</span>
+              <span>
+                <strong>Айгерим С.</strong>
+                <small>Бишкек</small>
+              </span>
+            </figcaption>
+          </figure>
+
+          <figure class="review">
+            <div class="stars" aria-label="5 из 5">★★★★★</div>
+            <blockquote>«Искали кресло без лишнего пафоса — „Сканди“ оказалось идеальным. Удобная посадка и очень аккуратная работа со швами.»</blockquote>
+            <figcaption>
+              <span class="review__avatar">ТБ</span>
+              <span>
+                <strong>Тимур Б.</strong>
+                <small>Бишкек</small>
+              </span>
+            </figcaption>
+          </figure>
+
+          <figure class="review">
+            <div class="stars" aria-label="5 из 5">★★★★★</div>
+            <blockquote>«Обставили всю спальню WOODORA. Помогли с подбором тонировки, показали образцы. Через год мебель как новая.»</blockquote>
+            <figcaption>
+              <span class="review__avatar">ЕК</span>
+              <span>
+                <strong>Елена К.</strong>
+                <small>Бишкек</small>
+              </span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- Заявка -->
+    <section class="section" id="order">
+      <div class="container order">
+        <div class="order__intro">
+          <p class="kicker">Заявка</p>
+          <h2 class="section__title">Подберём или&nbsp;изготовим мебель для&nbsp;вас</h2>
+          <p>Оставьте контакты — менеджер перезвонит, ответит на вопросы, рассчитает стоимость и сроки изготовления.</p>
+          <ul class="order__points">
+            <li>Консультация и замер</li>
+            <li>Расчёт стоимости по вашим размерам</li>
+            <li>Доставка и сборка по Бишкеку</li>
+          </ul>
+        </div>
+
+        <form class="lead-form" data-lead-form novalidate>
+          <div class="field">
+            <label for="order-name">Имя</label>
+            <input id="order-name" name="name" type="text" autocomplete="name" required minlength="2" maxlength="80">
+          </div>
+          <div class="field">
+            <label for="order-phone">Телефон</label>
+            <input id="order-phone" name="phone" type="tel" autocomplete="tel" placeholder="+996 ___ ___ ___" required>
+          </div>
+          <div class="field">
+            <label for="order-product">Что вас интересует</label>
+            <select id="order-product" name="product" data-product-select>
+              <option value="">Изготовление на заказ / консультация</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="order-comment">Комментарий <span>(необязательно)</span></label>
+            <textarea id="order-comment" name="comment" rows="3" maxlength="1000" placeholder="Размеры, цвет, сроки…"></textarea>
+          </div>
+          <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button type="submit" class="btn btn--primary btn--block">
+            Отправить заявку
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+          <p class="form-status" role="status" aria-live="polite"></p>
+          <p class="form-note">Нажимая кнопку, вы соглашаетесь на обработку контактных данных.</p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- Футер. TODO: заменить контакты на реальные -->
+  <footer class="footer" id="contacts">
+    <div class="container footer__grid">
+      <div class="footer__brand">
+        <a href="#" class="logo logo--light">
+          <span class="logo__mark"></span>
+          WOODORA
+        </a>
+        <p>Мебель из натурального дерева. Собственная мастерская в Бишкеке.</p>
+        <a href="#order" class="btn btn--primary">Оставить заявку</a>
+      </div>
+
+      <div class="footer__col">
+        <h4>Каталог</h4>
+        <a href="#catalog" data-filter="living">Гостиная</a>
+        <a href="#catalog" data-filter="bedroom">Спальня</a>
+        <a href="#catalog" data-filter="dining">Столовая</a>
+        <a href="#catalog" data-filter="office">Кабинет</a>
+        <a href="#catalog" data-filter="decor">Декор</a>
+      </div>
+
+      <div class="footer__col">
+        <h4>Услуги</h4>
+        <p>Изготовление на заказ</p>
+        <p>Замер и консультация</p>
+        <p>Доставка по Бишкеку</p>
+        <p>Сборка и установка</p>
+      </div>
+
+      <div class="footer__col">
+        <h4>Контакты</h4>
+        <a href="tel:+996700000000">+996 700 000 000</a>
+        <a href="https://wa.me/996700000000" target="_blank" rel="noopener">WhatsApp</a>
+        <a href="https://t.me/woodora" target="_blank" rel="noopener">Telegram</a>
+        <a href="https://instagram.com/woodora" target="_blank" rel="noopener">Instagram</a>
+        <p>г. Бишкек, адрес шоурума<br>Ежедневно 10:00–20:00</p>
+      </div>
+    </div>
+
+    <div class="container footer__bottom">
+      <p>© <span data-year>2026</span> WOODORA. Все права защищены.</p>
+      <div class="socials">
+        <a href="https://instagram.com/woodora" target="_blank" rel="noopener">Instagram</a>
+        <a href="https://wa.me/996700000000" target="_blank" rel="noopener">WhatsApp</a>
+        <a href="https://t.me/woodora" target="_blank" rel="noopener">Telegram</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Модальное окно заказа товара -->
+  <dialog class="modal" id="order-modal" aria-labelledby="modal-title">
+    <button type="button" class="modal__close" data-modal-close aria-label="Закрыть">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <div class="modal__product">
+      <img data-modal-image src="" alt="">
+      <div>
+        <p class="product__material" data-modal-material></p>
+        <h2 class="modal__title" id="modal-title" data-modal-name></h2>
+        <p class="price" data-modal-price></p>
+      </div>
+    </div>
+    <form class="lead-form" data-lead-form novalidate>
+      <input type="hidden" name="product" data-modal-product>
+      <div class="field">
+        <label for="modal-name">Имя</label>
+        <input id="modal-name" name="name" type="text" autocomplete="name" required minlength="2" maxlength="80">
+      </div>
+      <div class="field">
+        <label for="modal-phone">Телефон</label>
+        <input id="modal-phone" name="phone" type="tel" autocomplete="tel" placeholder="+996 ___ ___ ___" required>
+      </div>
+      <div class="field">
+        <label for="modal-comment">Комментарий <span>(необязательно)</span></label>
+        <textarea id="modal-comment" name="comment" rows="2" maxlength="1000" placeholder="Размеры, цвет, сроки…"></textarea>
+      </div>
+      <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button type="submit" class="btn btn--primary btn--block">
+        Заказать
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+      <p class="form-status" role="status" aria-live="polite"></p>
+    </form>
+  </dialog>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
