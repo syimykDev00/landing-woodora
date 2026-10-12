@@ -1,9 +1,13 @@
 node_modules/
 dist/
 .vercel/
+
+# Секреты: любые .env-файлы (.env, .env.local, .env.production и т.д.)
 .env
-.env.local
-.env.*.local
+.env.*
+# Шаблон без значений — в репозитории нужен
+!.env.example
+
 *.zip
 .DS_Store
 Thumbs.db
