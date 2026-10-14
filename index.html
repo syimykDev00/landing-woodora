@@ -301,6 +301,10 @@
             </select>
           </div>
           <div class="field">
+            <label for="order-quantity">Количество</label>
+            <input id="order-quantity" name="quantity" type="number" inputmode="numeric" min="1" max="99" step="1" value="1" required>
+          </div>
+          <div class="field">
             <label for="order-comment">Комментарий <span>(необязательно)</span></label>
             <textarea id="order-comment" name="comment" rows="3" maxlength="1000" placeholder="Размеры, цвет, сроки…"></textarea>
           </div>
@@ -387,6 +391,10 @@
       <div class="field">
         <label for="modal-phone">Телефон</label>
         <input id="modal-phone" name="phone" type="tel" autocomplete="tel" placeholder="+996 ___ ___ ___" required>
+      </div>
+      <div class="field">
+        <label for="modal-quantity">Количество</label>
+        <input id="modal-quantity" name="quantity" type="number" inputmode="numeric" min="1" max="99" step="1" value="1" required>
       </div>
       <div class="field">
         <label for="modal-comment">Комментарий <span>(необязательно)</span></label>

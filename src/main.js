@@ -114,6 +114,8 @@ function openOrder(id) {
   const form = modal.querySelector('form');
   form.reset();
   setStatus(form, '');
+  // reset() не снимает подсветку ошибок с прошлой попытки
+  form.querySelectorAll('[aria-invalid]').forEach((field) => field.removeAttribute('aria-invalid'));
 
   modalFields.image.src = p.image;
   modalFields.image.alt = p.name;
@@ -150,20 +152,22 @@ function setStatus(form, text, type = '') {
 }
 
 function validate(form) {
-  const name = form.elements.name;
-  const phone = form.elements.phone;
-  let firstInvalid = null;
+  const { name, phone, quantity } = form.elements;
+  const checks = [
+    [name, name.value.trim().length >= 2, 'Укажите ваше имя'],
+    [phone, phone.value.replace(/\D/g, '').length >= 9, 'Укажите номер телефона'],
+  ];
+  // Количество: целое число от 1 до 99 (то же правило проверяет сервер)
+  if (quantity) {
+    const value = quantity.value.trim();
+    checks.push([quantity, /^\d+$/.test(value) && +value >= 1 && +value <= 99, 'Укажите количество от 1 до 99']);
+  }
 
-  const nameOk = name.value.trim().length >= 2;
-  const phoneOk = phone.value.replace(/\D/g, '').length >= 9;
-  name.toggleAttribute('aria-invalid', !nameOk);
-  phone.toggleAttribute('aria-invalid', !phoneOk);
-  if (!nameOk) firstInvalid = name;
-  else if (!phoneOk) firstInvalid = phone;
-
-  if (firstInvalid) {
-    setStatus(form, nameOk ? 'Укажите номер телефона' : 'Укажите ваше имя', 'error');
-    firstInvalid.focus();
+  checks.forEach(([field, ok]) => field.toggleAttribute('aria-invalid', !ok));
+  const failed = checks.find(([, ok]) => !ok);
+  if (failed) {
+    setStatus(form, failed[2], 'error');
+    failed[0].focus();
     return false;
   }
   return true;
