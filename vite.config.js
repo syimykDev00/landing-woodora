@@ -45,10 +45,32 @@ function devApi({ dryRun }) {
   };
 }
 
-export default defineConfig(({ mode }) => {
+// Какие переменные конфиг сам подставил в process.env и с каким значением.
+// При изменении .env Vite перезагружает конфиг в том же процессе: модуль загружается
+// заново, а globalThis и process.env остаются. Без этого реестра подставленное в прошлый
+// раз значение выглядело бы как заданное в терминале, и новое значение из .env не применялось бы.
+const INJECTED_KEY = Symbol.for('woodora.vite.injectedEnv');
+
+function applyServerEnv(mode) {
+  const injected = (globalThis[INJECTED_KEY] ??= new Map());
+  // Убираем только свои значения, причём если их с тех пор никто не поменял.
+  // Переменные из терминала (родительского окружения) не трогаем — они главнее .env.
+  for (const [name, value] of injected) {
+    if (process.env[name] === value) delete process.env[name];
+  }
+  injected.clear();
+
   const env = loadEnv(mode, process.cwd(), ['TELEGRAM_', 'SUPABASE_']);
   for (const name of SERVER_ENV) {
-    if (env[name] && !process.env[name]) process.env[name] = env[name];
+    if (env[name] && !process.env[name]) {
+      process.env[name] = env[name];
+      injected.set(name, env[name]);
+    }
   }
+  return env;
+}
+
+export default defineConfig(({ mode }) => {
+  const env = applyServerEnv(mode);
   return { plugins: [devApi({ dryRun: env.TELEGRAM_DRY_RUN === '1' })] };
 });

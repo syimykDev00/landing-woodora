@@ -99,7 +99,9 @@ await test('TELEGRAM_DRY_RUN=1: /start печатается в терминал,
   delete process.env.TELEGRAM_BOT_TOKEN; // в dry-run токен не нужен
   console.log = (...a) => out.push(a.join(' '));
   try {
-    const dry = mountRoutes('TELEGRAM_DRY_RUN=1\n');
+    // chat id — из .env этого конфига: при перезагрузке конфиг убирает то, что сам подставил
+    // из прошлого .env (TELEGRAM_CHAT_ID=42 выше), даже если значение совпадает
+    const dry = mountRoutes('TELEGRAM_DRY_RUN=1\nTELEGRAM_CHAT_ID=42\n');
     const before = fetchCalls;
     const res = makeRes();
     await run(dry['/api/telegram'], makeReq('POST', {
