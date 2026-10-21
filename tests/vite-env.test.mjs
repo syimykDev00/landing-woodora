@@ -12,7 +12,10 @@ import assert from 'node:assert/strict';
 let fetchCalls = 0;
 globalThis.fetch = async () => { fetchCalls++; throw new Error('реальные запросы запрещены'); };
 
-const SERVER_ENV = ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'TELEGRAM_WEBHOOK_SECRET', 'SUPABASE_URL', 'SUPABASE_SECRET_KEY'];
+const SERVER_ENV = [
+  'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'TELEGRAM_WEBHOOK_SECRET', 'SUPABASE_URL', 'SUPABASE_SECRET_KEY',
+  'AI_GATEWAY_API_KEY', 'VERCEL_OIDC_TOKEN', 'AI_MODEL', 'AI_EMBEDDING_MODEL',
+];
 const INJECTED_KEY = Symbol.for('woodora.vite.injectedEnv');
 const savedEnv = { ...process.env };
 const savedCwd = process.cwd();

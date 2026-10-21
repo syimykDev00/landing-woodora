@@ -10,7 +10,7 @@ process.env.TELEGRAM_CHAT_ID = '42';
 
 const { default: handler } = await import('../api/lead.js');
 
-const okSupabase = () => new Response(JSON.stringify([{ id: 7 }]), { status: 201 });
+const okSupabase = () => new Response('7', { status: 200 });
 const okTelegram = () => new Response('{"ok":true}', { status: 200 });
 let supabase, telegram, calls;
 const realFetch = globalThis.fetch;
@@ -104,7 +104,7 @@ await test('кириллица, разрезанная между кусками
   const cut = buf.indexOf(Buffer.from('Айбек')) + 1; // посередине буквы «А»
   const r = await call(makeReq('POST', { chunks: [buf.subarray(0, cut), buf.subarray(cut)] }));
   assert.equal(r.status, 200);
-  assert.equal(JSON.parse(sbCalls()[0].init.body).customer_name, 'Айбек');
+  assert.equal(JSON.parse(sbCalls()[0].init.body).p_name, 'Айбек');
 });
 await test('Vercel: req.body уже объект → поток не читается', async () => {
   const r = await call(makeReq('POST', { body: { ...good } })); assert.equal(r.status, 200);
@@ -115,7 +115,7 @@ await test('Vercel: req.body строка JSON', async () => {
 await test('Vercel: req.body Buffer', async () => {
   const r = await call(makeReq('POST', { body: Buffer.from(JSON.stringify(good)) }));
   assert.equal(r.status, 200);
-  assert.equal(JSON.parse(sbCalls()[0].init.body).customer_name, 'Айбек');
+  assert.equal(JSON.parse(sbCalls()[0].init.body).p_name, 'Айбек');
 });
 await test('Vercel: req.body бросает (битый JSON) → 400', async () => {
   const req = makeReq('POST');
@@ -146,7 +146,7 @@ await test('поток строк-кусков ровно 16384 байт → п�
   const r = await call(rawReq(splitChars(text, 777)));
   assert.equal(r.status, 200);
   const row = JSON.parse(sbCalls()[0].init.body);
-  assert.equal(row.customer_name, 'Айбек'); assert.match(row.comment, /^ж+x?$/);
+  assert.equal(row.p_name, 'Айбек'); assert.match(row.p_comment, /^ж+x?$/);
 });
 await test('поток строк-кусков 16385 байт → 413 (байты не считаются дважды и не теряются)', async () => {
   const r = await call(rawReq(splitChars(jsonOfBytes(16385), 777))); assert.equal(r.status, 413);
@@ -155,7 +155,7 @@ await test('поток Buffer-кусков по 1 байту ровно 16384 �
   const buf = Buffer.from(jsonOfBytes(16384));
   const r = await call(rawReq([...buf].map((b) => Buffer.from([b]))));
   assert.equal(r.status, 200);
-  assert.equal(JSON.parse(sbCalls()[0].init.body).customer_name, 'Айбек');
+  assert.equal(JSON.parse(sbCalls()[0].init.body).p_name, 'Айбек');
 });
 await test('Vercel: req.body строка 16385 байт → 413', async () => {
   const r = await call(makeReq('POST', { body: jsonOfBytes(16385) })); assert.equal(r.status, 413);
@@ -188,14 +188,14 @@ for (const q of ['0', '100', '2.5', 'abc', -1, '1e1', true, ' 5x']) {
 for (const q of [1, '1', 99, ' 42 ']) {
   await test(`quantity=${JSON.stringify(q)} → принято`, async () => {
     const r = await post({ ...good, quantity: q }); assert.equal(r.status, 200);
-    assert.equal(JSON.parse(sbCalls()[0].init.body).quantity, Number(String(q).trim()));
+    assert.equal(JSON.parse(sbCalls()[0].init.body).p_quantity, Number(String(q).trim()));
   });
 }
 await test('слишком длинные поля обрезаются', async () => {
   const r = await post({ ...good, name: 'я'.repeat(200), comment: 'к'.repeat(1500) });
   assert.equal(r.status, 200);
   const row = JSON.parse(sbCalls()[0].init.body);
-  assert.equal(row.customer_name.length, 80); assert.equal(row.comment.length, 1000);
+  assert.equal(row.p_name.length, 80); assert.equal(row.p_comment.length, 1000);
 });
 
 // --- Успешный путь ---
@@ -204,13 +204,14 @@ await test('успех: одна запись, затем ровно одно с
   assert.equal(r.status, 200); assert.deepEqual(r.json, { ok: true });
   assert.equal(sbCalls().length, 1); assert.equal(tgCalls().length, 1);
   const sb = sbCalls()[0];
-  assert.equal(sb.url, 'https://test.supabase.co/rest/v1/applications?select=id');
+  assert.equal(sb.url, 'https://test.supabase.co/rest/v1/rpc/create_application');
   assert.equal(sb.init.method, 'POST');
   assert.equal(sb.init.headers.apikey, 'sb_secret_TESTKEY');
   assert.equal(sb.init.headers.Authorization, 'Bearer sb_secret_TESTKEY');
   assert.ok(sb.init.signal instanceof AbortSignal, 'у запроса к Supabase нет тайм-аута');
   assert.deepEqual(JSON.parse(sb.init.body), {
-    customer_name: 'Айбек', phone: '+996 700 123 456', product_name: 'Диван <b>', quantity: 3, comment: 'a & b', status: 'new',
+    p_name: 'Айбек', p_phone: '+996 700 123 456', p_source: 'site', p_product_id: null, p_product_name: 'Диван <b>',
+    p_quantity: 3, p_comment: 'a & b', p_chat_session_id: null,
   });
   const tg = tgCalls()[0];
   assert.equal(tg.url, 'https://api.telegram.org/bot123456:FAKE-token_x/sendMessage');
@@ -227,7 +228,7 @@ await test('старая форма без quantity/product/comment → quantity
   const r = await post({ name: 'Айбек', phone: '0700123456' });
   assert.equal(r.status, 200);
   const row = JSON.parse(sbCalls()[0].init.body);
-  assert.equal(row.quantity, 1); assert.equal(row.product_name, null); assert.equal(row.comment, null);
+  assert.equal(row.p_quantity, 1); assert.equal(row.p_product_name, null); assert.equal(row.p_comment, null);
   assert.ok(!JSON.parse(tgCalls()[0].init.body).text.includes('Товар'));
 });
 
@@ -257,7 +258,7 @@ const sbFailures = {
   }), { status: 400 }),
   'HTTP 401 (неверный ключ)': () => new Response('{"message":"Invalid API key"}', { status: 401 }),
   'HTTP 500, тело не JSON': () => new Response('<html>oops</html>', { status: 500 }),
-  '201, но пустой массив': () => new Response('[]', { status: 201 }),
+  '200, но в ответе не число': () => new Response('null', { status: 200 }),
   '201, но тело не JSON': () => new Response('not json', { status: 201 }),
   'сеть недоступна': () => { throw new TypeError('fetch failed'); },
   'тайм-аут': () => { throw new DOMException('The operation was aborted due to timeout', 'TimeoutError'); },

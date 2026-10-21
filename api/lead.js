@@ -2,11 +2,13 @@
 // Работает как Vercel Serverless Function (POST /api/lead),
 // а в режиме разработки подключается через vite.config.js.
 //
-// Порядок: проверка данных → запись в public.applications → сообщение в Telegram.
+// Порядок: проверка данных → RPC create_application (клиент находится по телефону или создаётся,
+// заявка попадает в CRM) → сообщение в Telegram.
 // Клиент получает «успешно» только если заявка сохранена в базе.
 // Если Telegram недоступен, заявка остаётся в базе, а ошибка пишется в лог.
 
-const MAX_LEN = { name: 80, phone: 30, product: 120, comment: 1000 };
+const MAX_LEN = { name: 80, phone: 30, product: 120, productId: 64, comment: 1000 };
+const SOURCES = new Set(['site', 'modal']);
 const QUANTITY = { min: 1, max: 99, default: 1 };
 const MAX_BODY = 16 * 1024;
 const TIMEOUT_MS = 8000;
@@ -82,27 +84,29 @@ export function escapeHtml(text) {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Запись в Supabase через REST API с секретным ключом (обходит RLS только на сервере).
-// Возвращает id новой строки или выбрасывает ошибку.
-async function saveApplication(lead) {
+// Запись в Supabase через RPC create_application с секретным ключом (обходит RLS только на сервере).
+// Функция в одной транзакции находит клиента по цифрам телефона (или создаёт) и добавляет заявку.
+// Возвращает id новой заявки или выбрасывает ошибку. Используется и формой, и AI-агентом.
+export async function saveApplication(lead) {
   const baseUrl = process.env.SUPABASE_URL.replace(/\/+$/, '');
   const key = process.env.SUPABASE_SECRET_KEY;
 
-  const response = await fetch(`${baseUrl}/rest/v1/applications?select=id`, {
+  const response = await fetch(`${baseUrl}/rest/v1/rpc/create_application`, {
     method: 'POST',
     headers: {
       apikey: key,
       Authorization: `Bearer ${key}`,
       'Content-Type': 'application/json',
-      Prefer: 'return=representation',
     },
     body: JSON.stringify({
-      customer_name: lead.name,
-      phone: lead.phone,
-      product_name: lead.product || null,
-      quantity: lead.quantity,
-      comment: lead.comment || null,
-      status: 'new',
+      p_name: lead.name,
+      p_phone: lead.phone,
+      p_source: lead.source || 'site',
+      p_product_id: lead.productId || null,
+      p_product_name: lead.product || null,
+      p_quantity: lead.quantity,
+      p_comment: lead.comment || null,
+      p_chat_session_id: lead.chatSessionId || null,
     }),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
@@ -113,13 +117,12 @@ async function saveApplication(lead) {
     throw new Error(`Supabase insert failed: HTTP ${response.status} ${error.code || ''} ${String(error.message || '').slice(0, 300)}`);
   }
 
-  const rows = await response.json().catch(() => null);
-  const id = Array.isArray(rows) ? rows[0]?.id : undefined;
-  if (id === undefined) throw new Error('Supabase insert returned no row');
+  const id = await response.json().catch(() => null);
+  if (!Number.isInteger(id)) throw new Error('Supabase insert returned no row');
   return id;
 }
 
-async function notifyTelegram(text) {
+export async function notifyTelegram(text) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) throw new Error('TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID не заданы');
@@ -179,6 +182,8 @@ export default async function handler(req, res) {
   const phone = clean(body.phone, MAX_LEN.phone);
   const product = clean(body.product, MAX_LEN.product);
   const comment = clean(body.comment, MAX_LEN.comment);
+  const productId = clean(body.product_id, MAX_LEN.productId);
+  const source = SOURCES.has(body.source) ? body.source : 'site';
   const quantity = parseQuantity(body.quantity);
 
   if (name.length < 2) {
@@ -193,7 +198,7 @@ export default async function handler(req, res) {
 
   let id;
   try {
-    id = await saveApplication({ name, phone, product, quantity, comment });
+    id = await saveApplication({ name, phone, product, productId, quantity, comment, source });
   } catch (err) {
     console.error('Заявка НЕ сохранена:', safeError(err));
     return send(res, 502, { ok: false, error: 'Не удалось отправить заявку' });

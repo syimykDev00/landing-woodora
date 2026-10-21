@@ -1,4 +1,5 @@
-import { products, ROOMS, formatPrice } from './products.js';
+import { products as fallbackProducts, ROOMS, formatPrice } from './products.js';
+import './chat.js';
 
 const ICON_ARROW = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 
@@ -10,9 +11,16 @@ const catalog = document.getElementById('catalog');
 
 const state = { filter: 'all', query: '' };
 
+// Каталог загружается из CRM (/api/catalog). Пока он грузится или если сервер недоступен,
+// показываем встроенный список из products.js — сайт не остаётся пустым.
+let products = fallbackProducts;
+
 /* ============ Каталог ============ */
 
 const normalize = (text) => text.toLowerCase().replace(/ё/g, 'е').trim();
+
+// Товары редактируются в админке — перед вставкой в HTML экранируем
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 function productCard(p) {
   const badge = p.oldPrice
@@ -24,14 +32,14 @@ function productCard(p) {
     <article class="product">
       <div class="product__media">
         ${badge}
-        <img src="${p.image}" alt="${p.name}" loading="lazy">
+        <img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">
       </div>
       <div class="product__body">
-        <p class="product__material">${p.material}</p>
-        <h3 class="product__name">${p.name}</h3>
+        <p class="product__material">${esc(p.material)}</p>
+        <h3 class="product__name">${esc(p.name)}</h3>
         <div class="product__footer">
           <p class="price">${formatPrice(p.price)}${oldPrice}</p>
-          <button type="button" class="btn-order" data-order="${p.id}">Заказать ${ICON_ARROW}</button>
+          <button type="button" class="btn-order" data-order="${esc(p.id)}">Заказать ${ICON_ARROW}</button>
         </div>
       </div>
     </article>`;
@@ -106,6 +114,7 @@ const modalFields = {
   name: modal.querySelector('[data-modal-name]'),
   price: modal.querySelector('[data-modal-price]'),
   product: modal.querySelector('[data-modal-product]'),
+  productId: modal.querySelector('[data-modal-product-id]'),
 };
 
 function openOrder(id) {
@@ -123,6 +132,7 @@ function openOrder(id) {
   modalFields.name.textContent = p.name;
   modalFields.price.textContent = formatPrice(p.price);
   modalFields.product.value = `${p.name} — ${formatPrice(p.price)}`;
+  modalFields.productId.value = p.id;
 
   modal.showModal();
 }
@@ -141,9 +151,28 @@ modal.addEventListener('click', (e) => {
 /* ============ Формы заявки ============ */
 
 const productSelect = document.querySelector('[data-product-select]');
-products.forEach((p) => {
-  productSelect.add(new Option(`${p.name} — ${formatPrice(p.price)}`, p.name));
-});
+function renderProductOptions() {
+  const selected = productSelect.value;
+  productSelect.length = 1; // первый пункт — «Изготовление на заказ / консультация»
+  products.forEach((p) => {
+    productSelect.add(new Option(`${p.name} — ${formatPrice(p.price)}`, p.name));
+  });
+  productSelect.value = [...productSelect.options].some((o) => o.value === selected) ? selected : '';
+}
+renderProductOptions();
+
+async function loadCatalog() {
+  try {
+    const response = await fetch('/api/catalog');
+    const result = await response.json();
+    if (!response.ok || !result.ok || !Array.isArray(result.products)) throw new Error(result.error || 'catalog');
+    products = result.products;
+    renderCatalog();
+    renderProductOptions();
+  } catch {
+    // Остаётся встроенный список — посетитель всё равно может оставить заявку
+  }
+}
 
 function setStatus(form, text, type = '') {
   const status = form.querySelector('.form-status');
@@ -209,3 +238,4 @@ document.querySelectorAll('[data-lead-form]').forEach((form) => {
 document.querySelector('[data-year]').textContent = new Date().getFullYear();
 
 renderCatalog();
+loadCatalog();

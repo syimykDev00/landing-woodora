@@ -1,58 +1,100 @@
-# WOODORA — лендинг мебельной мастерской в Бишкеке
+# WOODORA — лендинг, CRM/ERP и AI-агент мебельной мастерской
 
-Одностраничный сайт на Vite и чистом HTML/CSS/JS. Заявки с сайта сохраняются в Supabase и дублируются уведомлением в Telegram через серверную функцию Vercel.
+Лендинг на Vite (HTML/CSS/JS), админ-панель `/admin` (React + TypeScript), база Supabase (PostgreSQL + RLS + pgvector), серверные функции Vercel и AI-агент на AI SDK через Vercel AI Gateway. Всё связано в одну систему.
+
+## Как работает система
+
+```
+Лендинг ── форма / «Заказать» ──► /api/lead ──► RPC create_application ──► applications + clients ──► Telegram
+   │                                                                              ▲
+   ├── каталог ◄── /api/catalog ◄── products (правятся в админке)                 │
+   │                                                                              │
+   └── AI-чат ──► /api/chat ──► LLM + инструменты ──► search_knowledge (kb_chunks: полнотекстовый + pgvector)
+                                                   ├─► get_services / check_availability (products, services)
+                                                   ├─► get_business_info (company_settings)
+                                                   └─► create_lead (после согласия) ─────┘
+/admin (Supabase Auth + RLS is_admin) ── CRUD: заявки, клиенты, заказы, каталог, услуги, база знаний, настройки
+```
 
 ## Возможности
 
-- Каталог товаров с фильтрами по категориям и поиском
-- Карточки категорий и ссылки в футере сразу фильтруют каталог
-- Кнопка «Заказать» открывает окно заявки с выбранным товаром
-- Форма заявки внизу страницы
-- Заявки сохраняются в таблицу Supabase `public.applications`, затем приходит уведомление в Telegram (`api/lead.js`)
-- Команды бота `/start` и `/history` — история заявок за 7 дней прямо в Telegram (`api/telegram.js`)
+**Лендинг**
+- Каталог с фильтрами и поиском; товары загружаются из CRM (`/api/catalog`), при недоступности сервера — встроенный список `src/products.js`
+- Заявки (форма и «Заказать») → CRM: клиент находится по телефону или создаётся, заявка получает источник
+- AI-чат в правом нижнем углу (`src/chat.js`): ответы потоком, история сессии, заявка прямо из диалога
+
+**Админка `/admin`**
+- Обзор: показатели, график заявок по источникам, последние заявки и заказы
+- Заявки: фильтры по статусу и источнику, поиск, статус, ответственный, заметка, переписка AI-чата, «Создать заказ»
+- Клиенты: CRUD, история обращений и заказов
+- Заказы: позиции из каталога или свои, предоплата, срок, адрес; сумма считается в базе триггером
+- Каталог: товары сайта, наличие, срок изготовления, публикация
+- Аналитика: конверсия, суммы, средний чек, динамика, разбивки (функция `crm_analytics`)
+- AI-диалоги: переписки и вызванные инструменты
+- База знаний: статьи, загрузка .pdf/.txt/.md, индексация, проверка поиска
+- Настройки: контакты и условия компании, услуги, параметры чат-бота
+
+**AI-агент** (`server/agent.js`)
+- Модель через Vercel AI Gateway (по умолчанию `anthropic/claude-haiku-5.5`, переменная `AI_MODEL`)
+- Инструменты: `search_knowledge`, `get_services`, `check_availability`, `get_business_info`, `create_lead`
+- Факты — только из результатов инструментов; при отсутствии данных агент так и говорит и предлагает заявку
+- `create_lead`: только после явного согласия (`consent_confirmed: true`), телефон обязан быть в сообщениях посетителя, одна заявка на диалог, не больше 3 заявок в час с устройства
+- Лимиты: 20 сообщений за 10 минут с IP, 60 сообщений на диалог, сообщение до 1000 символов
+
+**RAG** (`server/kb.js`, SQL `match_kb_chunks`)
+- Документ → фрагменты ~900 символов с перекрытием → `kb_chunks` (tsvector, русская морфология) + embeddings `openai/text-embedding-3-small` (pgvector, HNSW)
+- Поиск гибридный: полнотекстовый + векторный, объединение Reciprocal Rank Fusion
+- Если embeddings недоступны (нет доступа к модели), индекс строится без них и работает честный полнотекстовый поиск; режим виден в админке
 
 ## Структура
 
 ```
-index.html        — разметка страницы
-src/style.css     — стили
-src/main.js       — каталог, фильтры, поиск, формы, модальное окно
-src/products.js   — список товаров (название, материал, цена, фото, категория)
-api/lead.js       — серверная функция: сохранение заявки в Supabase и уведомление в Telegram
-api/telegram.js   — webhook Telegram-бота: команды /start и /history
-scripts/          — telegram-local.mjs: локальная проверка webhook
-tests/            — автоматические тесты (npm test), Supabase и Telegram подменены
-public/           — статические файлы (favicon)
+index.html, src/          — лендинг (main.js — каталог и формы, chat.js — AI-чат, style.css)
+admin/                    — админ-панель (React + TS): app.tsx, pages/*, ui.tsx, charts.tsx
+api/lead.js               — заявка с сайта → CRM → Telegram
+api/catalog.js            — публичный каталог из Supabase
+api/chat.js               — AI-чат (GET — настройки и история, POST — ответ потоком)
+api/admin/kb.js           — индексация, загрузка файлов и проверка поиска (только админ)
+api/telegram.js           — webhook Telegram-бота (/start, /history)
+server/                   — серверные модули: db (Supabase), auth (проверка админа), kb (RAG), agent (промпт и инструменты)
+supabase/migrations/      — SQL-миграции (схема, RLS, функции, начальные данные с сайта)
+scripts/                  — create-admin.mjs, kb-reindex.mjs, telegram-local.mjs
+tests/                    — тесты (npm test), сеть подменена
 ```
 
-## Локальный запуск
+## База данных
+
+Таблицы: `admins`, `clients`, `products`, `services`, `applications`, `orders`, `order_items`, `company_settings`, `kb_documents`, `kb_chunks`, `chat_sessions`, `chat_messages`, `rate_limits`.
+
+Безопасность:
+- RLS включён на всех таблицах. У `anon` нет прав ни на одну таблицу.
+- `authenticated` проходит RLS только при наличии строки в `admins` (`public.is_admin()`).
+- Публичной регистрации с правами нет: администратора добавляет только сервер (`npm run admin:create`).
+- Секретный ключ используется только в `api/` и `server/`. В браузер попадают лишь адрес проекта и publishable-ключ.
+
+Применение миграций: Supabase → SQL Editor → выполнить по очереди файлы из `supabase/migrations/` (или `supabase db push`).
+
+## Запуск
 
 ```bash
 npm install
-cp .env.example .env   # вписать токен бота, chat id и ключи Supabase
-npm run dev            # http://localhost:5173
+cp .env.example .env      # SUPABASE_URL, SUPABASE_SECRET_KEY, SUPABASE_PUBLISHABLE_KEY, Telegram, AI_GATEWAY_API_KEY
+npm run dev               # сайт http://localhost:5173, админка http://localhost:5173/admin
+npm run admin:create -- you@example.com "Имя"   # создать администратора (пароль покажется один раз)
+npm run kb:reindex        # построить индекс базы знаний (или кнопка в админке)
+npm test                  # тесты
+npm run typecheck         # TypeScript админки
 ```
 
-`npm run dev` обслуживает `/api/lead` и `/api/telegram`, поэтому форму и команды бота можно проверить локально.
+## Переменные окружения
 
-```bash
-npm test               # тесты без реальных запросов к Supabase и Telegram
-```
-
-## Как обрабатывается заявка
-
-1. Форма проверяет имя, телефон и количество (1–99) и отправляет данные на `/api/lead`.
-2. Сервер повторно проверяет данные и записывает заявку в `public.applications` (статус `new`).
-3. Только после успешной записи бот отправляет уведомление в Telegram.
-4. Если записать в базу не удалось, клиент видит ошибку, Telegram не вызывается.
-5. Если заявка сохранена, а Telegram недоступен, клиент видит «заявка отправлена», ошибка пишется в лог Vercel (Logs) с номером заявки.
-
-## Настройка Supabase
-
-Таблица `public.applications`: `id`, `created_at`, `customer_name`, `phone`, `product_name`, `quantity`, `comment`, `status`.
-RLS включён, у ролей `anon` и `authenticated` нет прав — таблицу читает и пишет только сервер по секретному ключу.
-
-Укажите `SUPABASE_URL` и `SUPABASE_SECRET_KEY` (Project Settings → API) в `.env` и в Vercel. Префикс `VITE_` не использовать.
+| Переменная | Где | Зачем |
+|---|---|---|
+| `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | сервер | доступ к базе из функций |
+| `SUPABASE_PUBLISHABLE_KEY` | сборка | вход в админку (публичный, защищён RLS) |
+| `AI_GATEWAY_API_KEY` | сервер, локально | доступ к LLM и embeddings; на Vercel не нужен (OIDC) |
+| `AI_MODEL`, `AI_EMBEDDING_MODEL` | сервер, необязательно | выбор моделей |
+| `TELEGRAM_*` | сервер | уведомления и бот |
 
 ## Настройка Telegram-бота
 
@@ -104,13 +146,15 @@ RLS включён, у ролей `anon` и `authenticated` нет прав — 
 
 1. Vercel → **Add New → Project** → импортировать репозиторий с GitHub.
 2. Framework Preset: **Vite** (определится автоматически), остальные настройки по умолчанию.
-3. Добавить переменные окружения `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (`TELEGRAM_DRY_RUN` на Vercel не нужен).
+3. Добавить переменные окружения `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_PUBLISHABLE_KEY` (`TELEGRAM_DRY_RUN` на Vercel не нужен).
+   Для AI-агента включите AI Gateway в команде Vercel — функция авторизуется через OIDC без ключа.
 4. Deploy. После этого каждый `git push` в `main` деплоится автоматически.
 
 ## Что заменить на реальные данные
 
 - [ ] Контакты в футере (`index.html`): телефон, WhatsApp, Telegram, Instagram, адрес, график
-- [ ] Товары, цены и фото — `src/products.js`
+- [ ] Товары, цены и фото — в админке, раздел «Каталог» (`src/products.js` — только запасной список)
+- [ ] Контакты, адрес, оплата — в админке, «Настройки» (их использует AI-агент)
 - [ ] Тексты и цифры в блоке «О нас»
 - [ ] Отзывы — сейчас это примеры, нужны реальные
 - [ ] Фото — сейчас с Unsplash, заменить на свои (положить в `public/images/`)

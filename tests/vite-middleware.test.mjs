@@ -65,8 +65,8 @@ console.error = (...a) => logs.push(a.join(' '));
 
 const routes = mountRoutes('TELEGRAM_CHAT_ID=42\n');
 
-await test('зарегистрированы ровно /api/lead и /api/telegram', async () => {
-  assert.deepEqual(Object.keys(routes).sort(), ['/api/lead', '/api/telegram']);
+await test('зарегистрированы все маршруты API и /admin', async () => {
+  assert.deepEqual(Object.keys(routes).sort(), ['/admin', '/api/admin/kb', '/api/catalog', '/api/chat', '/api/lead', '/api/telegram']);
 });
 for (const path of ['/api/lead', '/api/telegram']) {
   await test(`${path}: обычный запрос — обработчик один раз, next не вызван`, async () => {

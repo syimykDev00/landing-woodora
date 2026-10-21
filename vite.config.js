@@ -1,12 +1,19 @@
+import { resolve } from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react';
 import leadHandler from './api/lead.js';
 import telegramHandler, { createTelegramHandler } from './api/telegram.js';
+import chatHandler from './api/chat.js';
+import catalogHandler from './api/catalog.js';
+import adminKbHandler from './api/admin/kb.js';
 
 // Серверные переменные для /api/* в режиме разработки.
 // Без префикса VITE_, поэтому в код для браузера они не попадают.
 const SERVER_ENV = [
   'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'TELEGRAM_WEBHOOK_SECRET',
   'SUPABASE_URL', 'SUPABASE_SECRET_KEY',
+  // AI-агент: ключ Vercel AI Gateway (локально) или OIDC-токен из `vercel env pull`
+  'AI_GATEWAY_API_KEY', 'VERCEL_OIDC_TOKEN', 'AI_MODEL', 'AI_EMBEDDING_MODEL',
 ];
 
 // Локальный «сухой прогон» webhook (TELEGRAM_DRY_RUN=1 в .env): ответы бота печатаются
@@ -22,6 +29,8 @@ const dryRunTelegramHandler = createTelegramHandler({
 // иначе запрос повис бы без ответа.
 function mount(server, path, handler) {
   server.middlewares.use(path, (req, res, next) => {
+    // connect отрезает префикс пути: handler-ам (как и на Vercel) нужен полный URL с query
+    if (req.originalUrl) req.url = req.originalUrl;
     handler(req, res).catch((err) => {
       if (res.headersSent) {
         console.error(`Ошибка ${path} после отправки ответа:`, err?.message);
@@ -34,13 +43,25 @@ function mount(server, path, handler) {
 }
 
 // В разработке обслуживаем /api/* теми же обработчиками, что и на Vercel,
-// чтобы форму и webhook можно было проверить через `npm run dev`.
+// чтобы форму, чат и webhook можно было проверить через `npm run dev`.
 function devApi({ dryRun }) {
   return {
     name: 'dev-api',
     configureServer(server) {
       mount(server, '/api/lead', leadHandler);
       mount(server, '/api/telegram', dryRun ? dryRunTelegramHandler : telegramHandler);
+      mount(server, '/api/chat', chatHandler);
+      mount(server, '/api/catalog', catalogHandler);
+      mount(server, '/api/admin/kb', adminKbHandler);
+      // /admin без слеша → /admin/ (на Vercel это делает rewrite в vercel.json)
+      server.middlewares.use('/admin', (req, res, next) => {
+        if (req.originalUrl === '/admin' || req.originalUrl?.startsWith('/admin?')) {
+          res.statusCode = 302;
+          res.setHeader('Location', '/admin/' + req.originalUrl.slice(6));
+          return res.end();
+        }
+        next();
+      });
     },
   };
 }
@@ -60,7 +81,7 @@ function applyServerEnv(mode) {
   }
   injected.clear();
 
-  const env = loadEnv(mode, process.cwd(), ['TELEGRAM_', 'SUPABASE_']);
+  const env = loadEnv(mode, process.cwd(), ['TELEGRAM_', 'SUPABASE_', 'AI_', 'VERCEL_OIDC_']);
   for (const name of SERVER_ENV) {
     if (env[name] && !process.env[name]) {
       process.env[name] = env[name];
@@ -72,5 +93,28 @@ function applyServerEnv(mode) {
 
 export default defineConfig(({ mode }) => {
   const env = applyServerEnv(mode);
-  return { plugins: [devApi({ dryRun: env.TELEGRAM_DRY_RUN === '1' })] };
+  return {
+    plugins: [devApi({ dryRun: env.TELEGRAM_DRY_RUN === '1' }), react()],
+    // В браузер (админку) попадают ТОЛЬКО адрес проекта и публичный publishable-ключ:
+    // доступ к данным ограничивает RLS. Секретный ключ сюда не передаётся никогда.
+    define: {
+      __SUPABASE_URL__: JSON.stringify(env.SUPABASE_URL || ''),
+      __SUPABASE_PUBLISHABLE_KEY__: JSON.stringify(env.SUPABASE_PUBLISHABLE_KEY || ''),
+    },
+    build: {
+      rollupOptions: {
+        input: {
+          main: resolve(import.meta.dirname, 'index.html'),
+          admin: resolve(import.meta.dirname, 'admin/index.html'),
+        },
+        output: {
+          // Библиотеки админки — отдельными файлами (кэшируются между обновлениями)
+          manualChunks: (id) => {
+            if (id.includes('node_modules/@supabase')) return 'vendor-supabase';
+            if (id.includes('node_modules/react')) return 'vendor-react';
+          },
+        },
+      },
+    },
+  };
 });
