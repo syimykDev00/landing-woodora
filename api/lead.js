@@ -141,13 +141,14 @@ export async function notifyTelegram(text) {
 
 // Текст ошибки для лога без секретов и персональных данных:
 // - путь /bot<токен> из URL Telegram;
-// - ключи Supabase (sb_secret_..., sb_publishable_..., JWT);
+// - ключи Supabase (sb_secret_..., sb_publishable_..., JWT) и OpenAI (sk-...);
 // - похожее на номер телефона (Postgres может повторить введённое значение в тексте ошибки).
 export function safeError(err) {
   const message = err?.name === 'TimeoutError' ? 'timeout' : String(err?.message || err);
   return message
     .replace(/bot\d+:[\w-]+/g, 'bot<hidden>')
     .replace(/sb_(secret|publishable)_[\w-]+/g, 'sb_<hidden>')
+    .replace(/sk-[\w-]{10,}/g, 'sk-<hidden>')
     .replace(/eyJ[\w-]+\.[\w-]+\.[\w-]+/g, '<jwt hidden>')
     .replace(/\+?\d[\d\s()-]{6,}\d/g, '<digits hidden>')
     .slice(0, 500);

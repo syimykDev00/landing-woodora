@@ -40,7 +40,7 @@ export function Applications({ routeId }: { routeId?: string }) {
     { key: 'created_at', header: 'Дата', render: (a) => <span title={formatDateTime(a.created_at)}>{relative(a.created_at)}</span>, sort: (a) => a.created_at },
     { key: 'customer_name', header: 'Клиент', render: (a) => <><strong>{a.customer_name}</strong><div className="muted small">{a.phone}</div></>, sort: (a) => a.customer_name },
     { key: 'product', header: 'Интерес', render: (a) => <>{a.product_name || <span className="muted">Консультация / на заказ</span>}{a.quantity > 1 && <span className="muted"> × {a.quantity}</span>}</>, sort: (a) => a.product_name },
-    { key: 'source', header: 'Источник', render: (a) => (a.source === 'chat' ? <Badge tone="accent">AI-чат</Badge> : APPLICATION_SOURCE[a.source]), sort: (a) => a.source },
+    { key: 'source', header: 'Источник', render: (a) => (a.source === 'ai_chat' ? <Badge tone="accent">AI-чат</Badge> : APPLICATION_SOURCE[a.source]), sort: (a) => a.source },
     { key: 'status', header: 'Статус', render: (a) => <Badge tone={APPLICATION_STATUS[a.status].tone}>{APPLICATION_STATUS[a.status].label}</Badge>, sort: (a) => a.status },
     { key: 'assigned', header: 'Ответственный', render: (a) => adminName(data?.admins ?? [], a.assigned_to), sort: (a) => a.assigned_to },
   ];

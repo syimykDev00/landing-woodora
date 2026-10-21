@@ -1,6 +1,6 @@
 # WOODORA — лендинг, CRM/ERP и AI-агент мебельной мастерской
 
-Лендинг на Vite (HTML/CSS/JS), админ-панель `/admin` (React + TypeScript), база Supabase (PostgreSQL + RLS + pgvector), серверные функции Vercel и AI-агент на AI SDK через Vercel AI Gateway. Всё связано в одну систему.
+Лендинг на Vite (HTML/CSS/JS), админ-панель `/admin` (React + TypeScript), база Supabase (PostgreSQL + RLS + pgvector), серверные функции Vercel и AI-агент на **OpenAI Responses API** (`gpt-6-luna`, embeddings `text-embedding-3-small`). Всё связано в одну систему. Все AI-запросы приложения идут только в OpenAI и только с сервера.
 
 ## Как работает система
 
@@ -9,7 +9,7 @@
    │                                                                              ▲
    ├── каталог ◄── /api/catalog ◄── products (правятся в админке)                 │
    │                                                                              │
-   └── AI-чат ──► /api/chat ──► LLM + инструменты ──► search_knowledge (kb_chunks: полнотекстовый + pgvector)
+   └── AI-чат ──► /api/chat ──► OpenAI Responses API + инструменты ──► search_knowledge (kb_chunks: полнотекстовый + pgvector)
                                                    ├─► get_services / check_availability (products, services)
                                                    ├─► get_business_info (company_settings)
                                                    └─► create_lead (после согласия) ─────┘
@@ -34,17 +34,22 @@
 - База знаний: статьи, загрузка .pdf/.txt/.md, индексация, проверка поиска
 - Настройки: контакты и условия компании, услуги, параметры чат-бота
 
-**AI-агент** (`server/agent.js`)
-- Модель через Vercel AI Gateway (по умолчанию `anthropic/claude-haiku-5.5`, переменная `AI_MODEL`)
+**AI-агент** (`server/agent.js`, `api/chat.js`)
+- OpenAI Responses API, модель `gpt-6-luna` (`OPENAI_MODEL`), потоковый ответ, официальный SDK `openai`
+- Полный цикл function calling: вызов от модели → проверка аргументов (strict JSON Schema + zod) → выполнение на сервере → `function_call_output` → ответ; до 4 раундов и 8 вызовов
+- Отвечает по-русски и по-кыргызски
+- Заявки из чата получают источник `ai_chat`, переписка и вызванные инструменты видны в админке
 - Инструменты: `search_knowledge`, `get_services`, `check_availability`, `get_business_info`, `create_lead`
 - Факты — только из результатов инструментов; при отсутствии данных агент так и говорит и предлагает заявку
 - `create_lead`: только после явного согласия (`consent_confirmed: true`), телефон обязан быть в сообщениях посетителя, одна заявка на диалог, не больше 3 заявок в час с устройства
-- Лимиты: 20 сообщений за 10 минут с IP, 60 сообщений на диалог, сообщение до 1000 символов
+- Лимиты: 20 сообщений за 10 минут с IP, 60 сообщений на диалог, общий суточный лимит (`CHAT_DAILY_LIMIT`), сообщение до 1000 символов
+- Расходы: модели передаются последние 12 сообщений и только найденные RAG-фрагменты, `max_output_tokens` 900, `reasoning.effort=low`, кэширование префикса (`prompt_cache_key`), `store: false`; токены каждого ответа сохраняются (`chat_messages.input_tokens/output_tokens`) и видны в «AI-диалогах» и «Аналитике»
 
 **RAG** (`server/kb.js`, SQL `match_kb_chunks`)
-- Документ → фрагменты ~900 символов с перекрытием → `kb_chunks` (tsvector, русская морфология) + embeddings `openai/text-embedding-3-small` (pgvector, HNSW)
+- Документ → фрагменты ~900 символов с перекрытием → `kb_chunks` (tsvector, русская морфология) + embeddings OpenAI `text-embedding-3-small`, 1536 измерений (pgvector, HNSW)
+- Сохранение документа в админке сразу переиндексирует его; векторы неизменённых фрагментов берутся из базы без повторного запроса к OpenAI
 - Поиск гибридный: полнотекстовый + векторный, объединение Reciprocal Rank Fusion
-- Если embeddings недоступны (нет доступа к модели), индекс строится без них и работает честный полнотекстовый поиск; режим виден в админке
+- Если embeddings недоступны (нет ключа OpenAI), индекс строится без них и работает честный полнотекстовый поиск; режим виден в админке
 
 ## Структура
 
@@ -56,7 +61,7 @@ api/catalog.js            — публичный каталог из Supabase
 api/chat.js               — AI-чат (GET — настройки и история, POST — ответ потоком)
 api/admin/kb.js           — индексация, загрузка файлов и проверка поиска (только админ)
 api/telegram.js           — webhook Telegram-бота (/start, /history)
-server/                   — серверные модули: db (Supabase), auth (проверка админа), kb (RAG), agent (промпт и инструменты)
+server/                   — серверные модули: db (Supabase), auth (проверка админа), openai (клиент), kb (RAG), agent (промпт и инструменты)
 supabase/migrations/      — SQL-миграции (схема, RLS, функции, начальные данные с сайта)
 scripts/                  — create-admin.mjs, kb-reindex.mjs, telegram-local.mjs
 tests/                    — тесты (npm test), сеть подменена
@@ -78,7 +83,7 @@ tests/                    — тесты (npm test), сеть подменена
 
 ```bash
 npm install
-cp .env.example .env      # SUPABASE_URL, SUPABASE_SECRET_KEY, SUPABASE_PUBLISHABLE_KEY, Telegram, AI_GATEWAY_API_KEY
+cp .env.example .env      # SUPABASE_URL, SUPABASE_SECRET_KEY, SUPABASE_PUBLISHABLE_KEY, Telegram, OPENAI_API_KEY
 npm run dev               # сайт http://localhost:5173, админка http://localhost:5173/admin
 npm run admin:create -- you@example.com "Имя"   # создать администратора (пароль покажется один раз)
 npm run kb:reindex        # построить индекс базы знаний (или кнопка в админке)
@@ -92,8 +97,9 @@ npm run typecheck         # TypeScript админки
 |---|---|---|
 | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | сервер | доступ к базе из функций |
 | `SUPABASE_PUBLISHABLE_KEY` | сборка | вход в админку (публичный, защищён RLS) |
-| `AI_GATEWAY_API_KEY` | сервер, локально | доступ к LLM и embeddings; на Vercel не нужен (OIDC) |
-| `AI_MODEL`, `AI_EMBEDDING_MODEL` | сервер, необязательно | выбор моделей |
+| `OPENAI_API_KEY` | сервер (Vercel: Sensitive) | AI-чат, function calling, embeddings |
+| `OPENAI_MODEL`, `OPENAI_EMBEDDING_MODEL` | сервер | `gpt-6-luna`, `text-embedding-3-small` |
+| `OPENAI_REASONING_EFFORT`, `CHAT_DAILY_LIMIT` | сервер, необязательно | глубина рассуждений, суточный лимит сообщений |
 | `TELEGRAM_*` | сервер | уведомления и бот |
 
 ## Настройка Telegram-бота
@@ -147,7 +153,7 @@ npm run typecheck         # TypeScript админки
 1. Vercel → **Add New → Project** → импортировать репозиторий с GitHub.
 2. Framework Preset: **Vite** (определится автоматически), остальные настройки по умолчанию.
 3. Добавить переменные окружения `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_PUBLISHABLE_KEY` (`TELEGRAM_DRY_RUN` на Vercel не нужен).
-   Для AI-агента включите AI Gateway в команде Vercel — функция авторизуется через OIDC без ключа.
+   Для AI-агента добавьте `OPENAI_API_KEY` (тип Sensitive), `OPENAI_MODEL`, `OPENAI_EMBEDDING_MODEL`.
 4. Deploy. После этого каждый `git push` в `main` деплоится автоматически.
 
 ## Что заменить на реальные данные

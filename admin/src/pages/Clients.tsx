@@ -58,7 +58,7 @@ export function Clients({ routeId }: { routeId?: string }) {
         <Chips<'all' | ClientSource>
           value={source}
           onChange={setSource}
-          options={[{ value: 'all', label: 'Все', count: clients.length }, ...(['site', 'chat', 'manual', 'phone', 'showroom'] as ClientSource[]).map((s) => ({ value: s, label: CLIENT_SOURCE[s] }))]}
+          options={[{ value: 'all', label: 'Все', count: clients.length }, ...(['site', 'ai_chat', 'manual', 'phone', 'showroom'] as ClientSource[]).map((s) => ({ value: s, label: CLIENT_SOURCE[s] }))]}
         />
         <div className="toolbar__right"><SearchInput value={query} onChange={setQuery} placeholder="Имя, телефон, email…" /></div>
       </div>

@@ -1,19 +1,21 @@
-// База знаний (RAG): разбиение текста на фрагменты, embeddings, индексация и поиск.
+// База знаний (RAG): разбиение текста на фрагменты, embeddings OpenAI, индексация и поиск.
 //
 // Поиск гибридный (SQL-функция public.match_kb_chunks):
 // - полнотекстовый (tsvector, русская морфология) работает всегда;
-// - векторный (pgvector, cosine) — если у фрагментов есть embeddings и удалось получить
-//   embedding вопроса через Vercel AI Gateway. Без доступа к модели embeddings поиск честно
-//   остаётся полнотекстовым, а режим виден в ответе (mode) и в админке.
-import { embed, embedMany } from 'ai';
+// - векторный (pgvector, cosine) — embeddings OpenAI text-embedding-3-small (1536 измерений,
+//   столбец kb_chunks.embedding vector(1536)). Без ключа OpenAI поиск честно остаётся
+//   полнотекстовым, а режим виден в ответе (mode) и в админке.
+// Векторный поиск важен и для кыргызского языка: embeddings многоязычные, а полнотекстовый
+// индекс построен по русской морфологии.
 import { db, check } from './db.js';
+import { openai, openaiConfigured, embeddingModel, openaiError } from './openai.js';
 
 export const EMBEDDING_DIMENSIONS = 1536;
-export const embeddingModel = () => process.env.AI_EMBEDDING_MODEL || 'openai/text-embedding-3-small';
+export { embeddingModel };
 
 const CHUNK_SIZE = 900;
 const CHUNK_OVERLAP = 150;
-const EMBED_TIMEOUT_MS = 8000;
+const EMBED_TIMEOUT_MS = 10_000;
 
 // Делим по абзацам, длинные абзацы — по предложениям. Соседние фрагменты перекрываются
 // хвостом предыдущего, чтобы ответ на стыке не терялся.
@@ -57,41 +59,46 @@ export function chunkText(text, size = CHUNK_SIZE, overlap = CHUNK_OVERLAP) {
   return chunks.filter((c) => c.trim().length > 0);
 }
 
-// null — модель embeddings недоступна (нет ключа/OIDC, нет кредитов, сеть). Причина — в лог.
+// null — embeddings недоступны (нет OPENAI_API_KEY, лимит, сеть). Причина — в лог.
 export async function embedTexts(values) {
+  if (!openaiConfigured() || !values.length) return values.length ? null : [];
   try {
-    const { embeddings } = await embedMany({
-      model: embeddingModel(),
-      values,
-      maxRetries: 1,
-      abortSignal: AbortSignal.timeout(EMBED_TIMEOUT_MS * 3),
-    });
-    if (!embeddings?.length || embeddings[0].length !== EMBEDDING_DIMENSIONS) {
-      throw new Error(`ожидалась размерность ${EMBEDDING_DIMENSIONS}, получено ${embeddings?.[0]?.length}`);
+    const result = await openai().embeddings.create(
+      { model: embeddingModel(), input: values, dimensions: EMBEDDING_DIMENSIONS },
+      { timeout: EMBED_TIMEOUT_MS * 3 },
+    );
+    const vectors = [...result.data].sort((a, b) => a.index - b.index).map((d) => d.embedding);
+    if (vectors.length !== values.length || vectors[0].length !== EMBEDDING_DIMENSIONS) {
+      throw new Error(`ожидалась размерность ${EMBEDDING_DIMENSIONS}, получено ${vectors[0]?.length}`);
     }
-    return embeddings;
+    return vectors;
   } catch (err) {
-    console.error('embeddings недоступны:', String(err?.message || err).slice(0, 300));
+    console.error('embeddings недоступны:', openaiError(err));
     return null;
   }
 }
 
 async function embedQuery(text) {
-  try {
-    const { embedding } = await embed({
-      model: embeddingModel(),
-      value: text,
-      maxRetries: 0,
-      abortSignal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
-    });
-    return embedding?.length === EMBEDDING_DIMENSIONS ? embedding : null;
-  } catch (err) {
-    console.error('embedding вопроса недоступен:', String(err?.message || err).slice(0, 300));
-    return null;
-  }
+  const vectors = await embedTexts([text]);
+  return vectors ? vectors[0] : null;
 }
 
-// Перестраивает фрагменты одного документа. Возвращает { chunks, embedded }.
+// Векторы уже проиндексированных фрагментов: при переиндексации неизменённый текст
+// не отправляется в OpenAI повторно (экономия запросов embeddings)
+async function existingEmbeddings(documentId) {
+  const rows = check(
+    await db().from('kb_chunks').select('content,embedding').eq('document_id', documentId).not('embedding', 'is', null),
+    'kb_chunks cache',
+  );
+  const map = new Map();
+  for (const r of rows) {
+    const vector = typeof r.embedding === 'string' ? JSON.parse(r.embedding) : r.embedding;
+    if (Array.isArray(vector) && vector.length === EMBEDDING_DIMENSIONS) map.set(r.content, vector);
+  }
+  return map;
+}
+
+// Перестраивает фрагменты одного документа. Возвращает { chunks, embedded, embedded_new }.
 export async function indexDocument(documentId) {
   const client = db();
   const doc = check(
@@ -102,7 +109,12 @@ export async function indexDocument(documentId) {
 
   // Заголовок добавляем в каждый фрагмент: «Гарантия: ...» находится и по слову из заголовка
   const parts = chunkText(doc.content).map((c) => `${doc.title}\n${c}`);
-  const vectors = parts.length ? await embedTexts(parts) : null;
+  const cache = await existingEmbeddings(doc.id);
+  const missing = [...new Set(parts.filter((p) => !cache.has(p)))];
+  const fresh = await embedTexts(missing);
+  if (fresh) missing.forEach((p, i) => cache.set(p, fresh[i]));
+  // Векторы должны быть у всех фрагментов — иначе документ индексируется без них (полнотекстовый поиск)
+  const vectors = parts.length && parts.every((p) => cache.has(p)) ? parts.map((p) => cache.get(p)) : null;
 
   check(await client.from('kb_chunks').delete().eq('document_id', doc.id), 'kb_chunks delete');
   if (parts.length) {
@@ -120,7 +132,7 @@ export async function indexDocument(documentId) {
       .eq('id', doc.id),
     'kb_documents update',
   );
-  return { chunks: parts.length, embedded: Boolean(vectors) };
+  return { chunks: parts.length, embedded: Boolean(vectors), embedded_new: fresh ? missing.length : 0 };
 }
 
 export async function indexAll() {

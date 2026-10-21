@@ -12,8 +12,8 @@ import adminKbHandler from './api/admin/kb.js';
 const SERVER_ENV = [
   'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'TELEGRAM_WEBHOOK_SECRET',
   'SUPABASE_URL', 'SUPABASE_SECRET_KEY',
-  // AI-агент: ключ Vercel AI Gateway (локально) или OIDC-токен из `vercel env pull`
-  'AI_GATEWAY_API_KEY', 'VERCEL_OIDC_TOKEN', 'AI_MODEL', 'AI_EMBEDDING_MODEL',
+  // AI-агент и embeddings: OpenAI (секретный ключ — только сервер)
+  'OPENAI_API_KEY', 'OPENAI_MODEL', 'OPENAI_EMBEDDING_MODEL', 'OPENAI_REASONING_EFFORT', 'CHAT_DAILY_LIMIT',
 ];
 
 // Локальный «сухой прогон» webhook (TELEGRAM_DRY_RUN=1 в .env): ответы бота печатаются
@@ -81,7 +81,7 @@ function applyServerEnv(mode) {
   }
   injected.clear();
 
-  const env = loadEnv(mode, process.cwd(), ['TELEGRAM_', 'SUPABASE_', 'AI_', 'VERCEL_OIDC_']);
+  const env = loadEnv(mode, process.cwd(), ['TELEGRAM_', 'SUPABASE_', 'OPENAI_', 'CHAT_']);
   for (const name of SERVER_ENV) {
     if (env[name] && !process.env[name]) {
       process.env[name] = env[name];

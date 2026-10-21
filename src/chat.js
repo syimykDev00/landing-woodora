@@ -23,7 +23,7 @@ root.innerHTML = `
       <span class="chat__avatar" aria-hidden="true"></span>
       <div class="chat__title-wrap">
         <h2 class="chat__title" id="chat-title">Помощник WOODORA</h2>
-        <p class="chat__subtitle">ИИ-консультант · отвечает по данным компании</p>
+        <p class="chat__subtitle">ИИ-консультант · русский и кыргызский</p>
       </div>
       <button type="button" class="chat__icon-btn" data-chat-reset title="Новый диалог" aria-label="Начать новый диалог">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></svg>
@@ -34,7 +34,7 @@ root.innerHTML = `
     <div class="chat__suggestions" data-chat-suggestions></div>
     <form class="chat__form" data-chat-form>
       <label class="visually-hidden" for="chat-input">Сообщение</label>
-      <textarea id="chat-input" rows="1" maxlength="1000" placeholder="Напишите вопрос…" autocomplete="off"></textarea>
+      <textarea id="chat-input" rows="1" maxlength="1000" placeholder="Напишите вопрос… / Суроо жазыңыз…" autocomplete="off"></textarea>
       <button type="submit" class="chat__send" aria-label="Отправить">${ICON_SEND}</button>
     </form>
     <p class="chat__note">ИИ может ошибаться. Цены и сроки подтвердит менеджер.</p>

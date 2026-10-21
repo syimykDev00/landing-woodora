@@ -1,8 +1,8 @@
 export type Room = 'living' | 'bedroom' | 'dining' | 'office' | 'decor';
 export type ApplicationStatus = 'new' | 'in_progress' | 'converted' | 'rejected';
-export type ApplicationSource = 'site' | 'modal' | 'chat' | 'manual';
+export type ApplicationSource = 'site' | 'modal' | 'ai_chat' | 'manual';
 export type OrderStatus = 'new' | 'confirmed' | 'in_production' | 'ready' | 'delivered' | 'completed' | 'cancelled';
-export type ClientSource = 'site' | 'chat' | 'manual' | 'phone' | 'showroom' | 'other';
+export type ClientSource = 'site' | 'ai_chat' | 'manual' | 'phone' | 'showroom' | 'other';
 export type KbKind = 'company' | 'faq' | 'product' | 'service' | 'policy' | 'article' | 'file';
 
 export interface Admin { user_id: string; email: string; full_name: string | null }
@@ -127,6 +127,8 @@ export interface KbDocument {
 export interface ChatSession {
   id: string;
   message_count: number;
+  input_tokens: number;
+  output_tokens: number;
   application_id: number | null;
   created_at: string;
   updated_at: string;
@@ -137,6 +139,9 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   tool_calls: { name: string; input: unknown; ok: boolean }[] | null;
+  model: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
   created_at: string;
 }
 
@@ -146,7 +151,10 @@ export interface Analytics {
     clients: number; applications: number; applications_new: number; orders: number;
     orders_active: number; revenue: number; products_active: number; chat_sessions: number;
   };
-  period: { applications: number; clients: number; orders: number; revenue: number; converted: number; chat_sessions: number };
+  period: {
+    applications: number; clients: number; orders: number; revenue: number; converted: number; chat_sessions: number;
+    ai_input_tokens?: number; ai_output_tokens?: number;
+  };
   daily: { day: string; site: number; chat: number; manual: number; revenue: number }[];
   applications_by_status: Partial<Record<ApplicationStatus, number>>;
   applications_by_source: Partial<Record<ApplicationSource, number>>;

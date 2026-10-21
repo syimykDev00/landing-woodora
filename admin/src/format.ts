@@ -32,7 +32,7 @@ export const APPLICATION_STATUS: Record<ApplicationStatus, { label: string; tone
 export const APPLICATION_SOURCE: Record<ApplicationSource, string> = {
   site: 'Форма сайта',
   modal: 'Кнопка «Заказать»',
-  chat: 'AI-чат',
+  ai_chat: 'AI-чат',
   manual: 'Вручную',
 };
 
@@ -47,7 +47,7 @@ export const ORDER_STATUS: Record<OrderStatus, { label: string; tone: Tone }> = 
 };
 
 export const CLIENT_SOURCE: Record<ClientSource, string> = {
-  site: 'Сайт', chat: 'AI-чат', manual: 'Вручную', phone: 'Звонок', showroom: 'Шоурум', other: 'Другое',
+  site: 'Сайт', ai_chat: 'AI-чат', manual: 'Вручную', phone: 'Звонок', showroom: 'Шоурум', other: 'Другое',
 };
 
 export const ROOMS: Record<Room, string> = {

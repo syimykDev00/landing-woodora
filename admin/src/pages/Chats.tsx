@@ -22,6 +22,7 @@ export function Chats({ routeId }: { routeId?: string }) {
     { key: 'updated', header: 'Последнее сообщение', render: (s) => <span title={formatDateTime(s.updated_at)}>{relative(s.updated_at)}</span>, sort: (s) => s.updated_at },
     { key: 'created', header: 'Начат', render: (s) => formatDateTime(s.created_at), sort: (s) => s.created_at },
     { key: 'count', header: 'Сообщений', render: (s) => s.message_count, sort: (s) => s.message_count, className: 'num' },
+    { key: 'tokens', header: 'Токены (вход / выход)', render: (s) => `${(s.input_tokens ?? 0).toLocaleString('ru-RU')} / ${(s.output_tokens ?? 0).toLocaleString('ru-RU')}`, sort: (s) => (s.input_tokens ?? 0) + (s.output_tokens ?? 0), className: 'num' },
     {
       key: 'lead', header: 'Заявка',
       render: (s) => (s.application_id ? <a href={`#/applications/${s.application_id}`} onClick={(e) => e.stopPropagation()}><Badge tone="success">№{s.application_id}</Badge></a> : <span className="muted">—</span>),
@@ -31,7 +32,7 @@ export function Chats({ routeId }: { routeId?: string }) {
 
   return (
     <>
-      <PageHeader title="AI-диалоги" subtitle="Переписки посетителей с AI-агентом и вызванные им инструменты" />
+      <PageHeader title="AI-диалоги" subtitle="Переписки с AI-агентом (OpenAI), вызванные инструменты и расход токенов" />
       <div className="toolbar">
         <Chips<'all' | 'lead'>
           value={filter}
@@ -65,7 +66,10 @@ function Transcript({ sessionId, onClose }: { sessionId: string; onClose: () => 
                   ))}
                 </p>
               ) : null}
-              <time className="muted small">{formatDateTime(m.created_at)}</time>
+              <time className="muted small">
+                {formatDateTime(m.created_at)}
+                {m.model && ` · ${m.model} · ${m.input_tokens ?? 0}/${m.output_tokens ?? 0} ток.`}
+              </time>
             </div>
           ))}
           {!data?.length && <p className="muted">Сообщений нет</p>}

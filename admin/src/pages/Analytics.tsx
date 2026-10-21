@@ -17,7 +17,7 @@ export function Analytics() {
   const p = data?.period;
   const conversion = p && p.applications ? Math.round((p.converted / p.applications) * 100) : 0;
   const avgCheck = p && p.orders ? Math.round(p.revenue / p.orders) : 0;
-  const chatShare = data && p?.applications ? Math.round(((data.applications_by_source.chat ?? 0) / p.applications) * 100) : 0;
+  const chatShare = data && p?.applications ? Math.round(((data.applications_by_source.ai_chat ?? 0) / p.applications) * 100) : 0;
 
   return (
     <>
@@ -87,7 +87,10 @@ export function Analytics() {
               />
             </Card>
           </div>
-          <p className="muted small">AI-диалогов за период: {p.chat_sessions}. Новых клиентов: {p.clients}.</p>
+          <p className="muted small">
+            AI-диалогов за период: {p.chat_sessions}. Новых клиентов: {p.clients}.
+            {' '}Токены OpenAI за период: {(p.ai_input_tokens ?? 0).toLocaleString('ru-RU')} входных, {(p.ai_output_tokens ?? 0).toLocaleString('ru-RU')} выходных.
+          </p>
         </div>
       )}
     </>

@@ -14,7 +14,7 @@ globalThis.fetch = async () => { fetchCalls++; throw new Error('реальные
 
 const SERVER_ENV = [
   'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'TELEGRAM_WEBHOOK_SECRET', 'SUPABASE_URL', 'SUPABASE_SECRET_KEY',
-  'AI_GATEWAY_API_KEY', 'VERCEL_OIDC_TOKEN', 'AI_MODEL', 'AI_EMBEDDING_MODEL',
+  'OPENAI_API_KEY', 'OPENAI_MODEL', 'OPENAI_EMBEDDING_MODEL', 'OPENAI_REASONING_EFFORT', 'CHAT_DAILY_LIMIT',
 ];
 const INJECTED_KEY = Symbol.for('woodora.vite.injectedEnv');
 const savedEnv = { ...process.env };
